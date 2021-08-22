@@ -1,0 +1,15 @@
+{
+    "name": "lucky-cls/albin",
+    "autoload": {
+        "psr-4": {
+            "LuckyCls\\Albin\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "lucky-cls",
+            "email": "cailusen.lucky@gmail.com"
+        }
+    ],
+    "require": {}
+}
