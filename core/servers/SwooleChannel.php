@@ -2,12 +2,14 @@
 namespace Albin\core\servers;
 
 use Albin\core\config\Config;
+use Albin\core\messages\CoroutineMessage;
 use Albin\exceptions\SystemException;
+use Swoole\Coroutine;
 use Swoole\Coroutine\Channel;
 
-class SwooleChannel
+abstract class SwooleChannel
 {
-    private static $singleChannel = null;
+    protected static $singleChannel = null;
 
     private function __construct()
     {
@@ -16,14 +18,36 @@ class SwooleChannel
     private static function init()
     {
 
-        if (self::$singleChannel === null) {
+        if (static::$singleChannel === null) {
 
-            self::$singleChannel = new Channel(Config::get('server.channel.size'));
+            static::$singleChannel = new Channel(Config::get('server.channel.size'));
         }
 
-        return self::$singleChannel;
+        return static::$singleChannel;
     }
 
+
+
+    abstract static function resumeMsg($body);
+
+
+    public static function resume()
+    {
+        Coroutine::create(function () {
+
+            $data = CoroutineMessage::pop();
+            if ($data) {
+
+                static::resumeMsg($data);
+
+            } else {
+
+                echo "sleeping ... \r\n";
+                Coroutine::sleep(2);
+            }
+
+        });
+    }
 
 
     public static function __callStatic($name, $arguments)
