@@ -1,4 +1,6 @@
 server:
+  channel:
+    size: 1024
   http:
     host: 127.0.0.1
     port: 9501
