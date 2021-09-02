@@ -1,18 +1,29 @@
 <?php
 namespace Albin\core\servers;
 
+use Albin\app\controllers\Api\IndexController;
+use Albin\core\commons\FastRouter;
 use Albin\core\config\Config;
 use Albin\core\messages\CoroutineMessage;
 use Swoole\Coroutine;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Coroutine\Http\Server;
+use FastRoute;
 use function Swoole\Coroutine\run;
+
 
 class SwooleServer{
 
     private static $single = null;
 
+
+    private function __construct()
+    {
+    }
+
+
+    // 初始化
     public static function init()
     {
 
@@ -27,14 +38,55 @@ class SwooleServer{
     private function startHttp()
     {
 
-        // 开启http 服务
           run(function () {
 
               Coroutine::create(function () {
+                  // 开启http 服务
 
                   $server = new Server(Config::get('server.http.host'), Config::get('server.http.port'), false);
-                  $server->handle('/', function (Request $request, Response $response) {
-                      $response->end("<h1>Index</h1>");
+
+                  // 路由
+                  $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
+                      $r->addRoute('GET', '/test', function () {
+
+                      });
+                  });
+
+                  FastRouter::init();
+
+
+                  $server->handle('/', function (Request $request, Response $response) use ($dispatcher) {
+
+//                      var_dump(
+//
+//                          Config::get('router')
+//                      );
+                      $httpMethod = $request->server['request_method'];
+                      $uri = $request->server['request_uri'];
+                      // Strip query string (?foo=bar) and decode URI
+                      if (false !== $pos = strpos($uri, '?')) {
+                          $uri = substr($uri, 0, $pos);
+                      }
+                      $uri = rawurldecode($uri);
+                      $routeInfo = $dispatcher->dispatch($httpMethod, $uri);
+//                      var_dump($routeInfo);
+                      switch ($routeInfo[0]) {
+                          case FastRoute\Dispatcher::NOT_FOUND:
+                              $response->status(404);
+                              break;
+                          case FastRoute\Dispatcher::METHOD_NOT_ALLOWED:
+                              $allowedMethods = $routeInfo[1];
+                              $response->status(405);
+                              break;
+                          case FastRoute\Dispatcher::FOUND:
+                              $handler = $routeInfo[1];
+                              $vars = $routeInfo[2];
+                              $handler();
+                              // ... call $handler with $vars
+                              break;
+                      }
+
+
                   });
 
                   $server->start();
@@ -60,7 +112,7 @@ class SwooleServer{
                                   $ws->close();
                                   break;
                               }
-                              CoroutineMessage::push(['rand' => rand(1000, 9999), 'index' => $ws]);
+                              CoroutineMessage::push(['body' => rand(1000, 9999), 'ws' => $ws]);
                               $ws->push("Hello {$frame->data}!");
                               $ws->push("How are you, {$frame->data}?");
                           }
@@ -105,12 +157,6 @@ HTML
           });
 
     }
-
-
-
-
-
-
 
 
 }

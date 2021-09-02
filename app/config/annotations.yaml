@@ -1,0 +1,4 @@
+router:
+  controllers:
+    - controllers/
+    - controllers/Api/
